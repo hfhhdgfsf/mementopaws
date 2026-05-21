@@ -1,0 +1,55 @@
+name = "mementopaws"
+compatibility_date = "2025-05-21"
+
+[site]
+bucket = "./out"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+
+[[redirects]]
+from = "/collection/*"
+to = "/collection/index.html"
+status = 200
+
+[[redirects]]
+from = "/collection/"
+to = "/collection/index.html"
+status = 200
+
+[[redirects]]
+from = "/about/"
+to = "/about/index.html"
+status = 200
+
+[[redirects]]
+from = "/about/*"
+to = "/about/index.html"
+status = 200
+
+[[redirects]]
+from = "/faq/"
+to = "/faq/index.html"
+status = 200
+
+[[redirects]]
+from = "/faq/*"
+to = "/faq/index.html"
+status = 200
+
+[[redirects]]
+from = "/contact/"
+to = "/contact/index.html"
+status = 200
+
+[[redirects]]
+from = "/contact/*"
+to = "/contact/index.html"
+status = 200
+
+[[redirects]]
+from = "/products/*"
+to = "/products/:slug/index.html"
+status = 200
