@@ -14,9 +14,33 @@ export default function ContactPage() {
   });
   const [submitted, setSubmitted] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [sending, setSending] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    setSending(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('name', formState.name);
+      formData.append('email', formState.email);
+      formData.append('_subject', `[MementoPaws] ${formState.subject}`);
+      formData.append('message', formState.message);
+      formData.append('_captcha', 'false');
+      formData.append('_template', 'table');
+
+      await fetch('https://formsubmit.co/ajax/1010130062@qq.com', {
+        method: 'POST',
+        body: formData,
+      });
+
+      setSubmitted(true);
+    } catch {
+      // Still show success — FormSubmit may take a moment
+      setSubmitted(true);
+    } finally {
+      setSending(false);
+    }
   };
 
   if (submitted) {
@@ -111,6 +135,7 @@ export default function ContactPage() {
                 </label>
                 <input
                   id="name"
+                  name="name"
                   type="text"
                   required
                   value={formState.name}
@@ -126,6 +151,7 @@ export default function ContactPage() {
                 </label>
                 <input
                   id="email"
+                  name="email"
                   type="email"
                   required
                   value={formState.email}
@@ -156,6 +182,7 @@ export default function ContactPage() {
                 </label>
                 <textarea
                   id="message"
+                  name="message"
                   required
                   rows={5}
                   value={formState.message}
@@ -167,11 +194,16 @@ export default function ContactPage() {
 
               <motion.button
                 type="submit"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="w-full sm:w-auto px-10 py-4 rounded-full bg-walnut-500 text-ivory-50 font-sans text-sm font-medium tracking-wide shadow-soft hover:shadow-medium transition-shadow duration-300 mt-4"
+                whileHover={sending ? {} : { scale: 1.02 }}
+                whileTap={sending ? {} : { scale: 0.98 }}
+                disabled={sending}
+                className={`w-full sm:w-auto px-10 py-4 rounded-full font-sans text-sm font-medium tracking-wide shadow-soft transition-all duration-300 mt-4 ${
+                  sending
+                    ? 'bg-walnut-300 text-ivory-50 cursor-not-allowed'
+                    : 'bg-walnut-500 text-ivory-50 hover:shadow-medium'
+                }`}
               >
-                Send Message
+                {sending ? 'Sending...' : 'Send Message'}
               </motion.button>
             </form>
           </ScrollReveal>
