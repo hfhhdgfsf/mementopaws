@@ -75,7 +75,7 @@ export default function ContactPage() {
               {[
                 {
                   title: 'Email Us',
-                  content: 'hello@mementopaws.com',
+                  content: '1010130062@qq.com',
                   description: 'We respond within 24 hours',
                 },
                 {
