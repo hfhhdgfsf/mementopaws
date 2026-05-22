@@ -299,6 +299,7 @@ function PhotoUpload({ product }: { product: Product }) {
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [uploadProgress, setUploadProgress] = useState('');
 
   // Clean up preview URLs on unmount
   useEffect(() => {
@@ -332,35 +333,56 @@ function PhotoUpload({ product }: { product: Product }) {
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0 || !email) return;
     setSending(true);
     setErrorMsg('');
 
-    const form = e.target as HTMLFormElement;
+    try {
+      const urls: string[] = [];
 
-    // Remove old hidden file inputs
-    form.querySelectorAll('input[name^=photo-]').forEach((el) => el.remove());
+      // Upload each photo to Cloudinary
+      for (let i = 0; i < files.length; i++) {
+        setUploadProgress(`Uploading photo ${i + 1} of ${files.length}...`);
+        const fd = new FormData();
+        fd.append('file', files[i].file);
+        fd.append('upload_preset', 'mementopaws_upload');
 
-    // Create one hidden file input per photo (different name for each)
-    files.forEach((f, i) => {
-      const dt = new DataTransfer();
-      dt.items.add(f.file);
-      const input = document.createElement('input');
-      input.type = 'file';
-      input.name = `photo-${i}`;
-      input.style.display = 'none';
-      input.files = dt.files;
-      form.appendChild(input);
-    });
+        const res = await fetch(`https://api.cloudinary.com/v1_1/dsy9yvepz/image/upload`, {
+          method: 'POST',
+          body: fd,
+        });
 
-    setTimeout(() => {
-      setSending(false);
+        if (!res.ok) throw new Error(`Photo ${i + 1} upload failed`);
+        const data = await res.json();
+        urls.push(data.secure_url);
+      }
+
+      // Send email notification via FormSubmit (text only, lightweight)
+      setUploadProgress('Sending notification...');
+      const emailFd = new FormData();
+      emailFd.append('email', email);
+      emailFd.append('_subject', `[MementoPaws] Photo upload for ${product.name}`);
+      emailFd.append('_captcha', 'false');
+      emailFd.append('_template', 'table');
+      emailFd.append(
+        'message',
+        `Customer: ${email}\nProduct: ${product.name}\nPhotos: ${files.length}\n\n${urls.join('\n')}`
+      );
+
+      await fetch('https://formsubmit.co/ajax/1010130062@qq.com', {
+        method: 'POST',
+        body: emailFd,
+      });
+
       setSent(true);
-    }, 2000);
-
-    form.submit();
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Upload failed. Please try again.');
+    } finally {
+      setSending(false);
+      setUploadProgress('');
+    }
   };
 
   if (sent) {
@@ -386,20 +408,15 @@ function PhotoUpload({ product }: { product: Product }) {
     );
   }
 
-  const canSubmit = files.length > 0 && email.trim() !== '' && !sending;
+  const isBusy = sending || uploadProgress !== '';
+  const canSubmit = files.length > 0 && email.trim() !== '' && !isBusy;
 
   return (
     <section className="py-24 md:py-36 bg-ivory-100 relative overflow-hidden">
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-candlelight-300/10 pointer-events-none" />
 
       <div className="container-narrow relative">
-        <form
-          onSubmit={handleSubmit}
-          action="https://formsubmit.co/1010130062@qq.com"
-          method="POST"
-          encType="multipart/form-data"
-          target="_blank"
-        >
+        <form onSubmit={handleSubmit}>
           <div className="max-w-2xl mx-auto text-center">
             <ScrollReveal>
               <span className="block font-sans text-xs font-medium tracking-[0.25em] uppercase text-walnut-400 mb-6">
@@ -513,6 +530,12 @@ function PhotoUpload({ product }: { product: Product }) {
               </motion.p>
             )}
 
+            {uploadProgress && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 font-sans text-sm text-walnut-400">
+                {uploadProgress}
+              </motion.p>
+            )}
+
             <ScrollReveal delay={0.25}>
               <motion.button
                 type="submit"
@@ -520,14 +543,14 @@ function PhotoUpload({ product }: { product: Product }) {
                 whileHover={canSubmit ? { scale: 1.02 } : {}}
                 whileTap={canSubmit ? { scale: 0.98 } : {}}
                 className={`mt-8 px-10 py-4 rounded-full font-sans text-sm font-medium tracking-wide transition-all duration-300 ${
-                  sending
+                  isBusy
                     ? 'bg-walnut-300 text-ivory-50 cursor-wait'
                     : canSubmit
                     ? 'bg-walnut-500 text-ivory-50 shadow-soft hover:shadow-medium'
                     : 'bg-ivory-300 text-ivory-50 cursor-not-allowed'
                 }`}
               >
-                {sending ? 'Sending...' : 'Send Photographs'}
+                {isBusy ? (uploadProgress || 'Sending...') : 'Send Photographs'}
               </motion.button>
             </ScrollReveal>
           </div>
