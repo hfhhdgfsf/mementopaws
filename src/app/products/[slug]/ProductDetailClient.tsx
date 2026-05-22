@@ -308,6 +308,15 @@ function PhotoUpload({ product }: { product: Product }) {
 
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
+
+    // Check file size (Cloudinary free tier: 10MB limit)
+    const MAX_SIZE = 10 * 1024 * 1024;
+    const oversized = Array.from(fileList).find((f) => f.size > MAX_SIZE);
+    if (oversized) {
+      setErrorMsg(`${oversized.name} is over 10MB. Please send a smaller version or original from your phone.`);
+      return;
+    }
+
     const newFiles = Array.from(fileList).map((file) => ({
       file,
       preview: URL.createObjectURL(file),
@@ -426,7 +435,7 @@ function PhotoUpload({ product }: { product: Product }) {
                 Upload Photographs
               </h2>
               <p className="font-sans text-base text-charcoal-400 leading-relaxed mb-8">
-                Send us photos of your companion. Drag them here or click to browse — you will see a preview of each one. You can add up to 5 photos.
+                Please send original-quality photos straight from your phone or camera — no need to compress or resize. We need the clearest view of their face, coat pattern, and any distinctive markings. Up to 5 photos, 10MB each.
               </p>
             </ScrollReveal>
 
@@ -516,7 +525,7 @@ function PhotoUpload({ product }: { product: Product }) {
                         Drag photos here, or click to browse
                       </p>
                       <p className="font-sans text-xs text-charcoal-300">
-                        JPG or PNG. Up to 5 photos.
+                        JPG or PNG. Original quality from your phone or camera is best. Up to 5 photos.
                       </p>
                     </>
                   )}
