@@ -122,7 +122,7 @@ function Introduction({ product }: { product: Product }) {
           <ScrollReveal delay={0.3}>
             <div className="flex flex-wrap items-center gap-6 pt-8 border-t border-ivory-200">
               <p className="font-sans text-2xl font-light text-charcoal-700">
-                ¥{product.price.toLocaleString()}
+                ${product.price.toLocaleString()}
               </p>
               <span className="font-sans text-xs text-charcoal-400">
                 Handcrafted to order
@@ -636,38 +636,58 @@ function ProductFAQ() {
 }
 
 /* ── Inquiry CTA ── */
-function InquiryCTA() {
+/* ── How to Order ── */
+function InquiryCTA({ product }: { product: Product }) {
   return (
     <section className="py-20 md:py-28 bg-ivory-100">
-      <div className="container-narrow text-center">
+      <div className="container-narrow">
         <ScrollReveal>
-          <div className="max-w-xl mx-auto">
-            <h2 className="font-serif text-2xl md:text-3xl text-walnut-600 mb-6">
-              Begin Your Memorial
-            </h2>
-            <p className="font-sans text-base text-charcoal-400 leading-relaxed mb-10">
-              This urn is not kept in stock — it is made for you and your companion alone. When you are ready, we will begin.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <motion.a
-                href="/contact/"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center justify-center px-10 py-4 rounded-full bg-walnut-500 text-ivory-50 font-sans text-sm font-medium tracking-wide shadow-soft hover:shadow-medium transition-shadow duration-300"
-              >
-                Inquire About This Piece
-              </motion.a>
-              <motion.a
-                href="/collection/"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="inline-flex items-center justify-center px-10 py-4 rounded-full border border-walnut-500/30 text-walnut-600 font-sans text-sm font-medium tracking-wide hover:bg-walnut-50 transition-colors duration-300"
-              >
-                View Collection
-              </motion.a>
-            </div>
-          </div>
+          <span className="block font-sans text-xs font-medium tracking-[0.25em] uppercase text-walnut-400 mb-6">
+            How to Order
+          </span>
+          <h2 className="font-serif text-display-sm md:text-3xl text-walnut-600 mb-12 text-balance">
+            Begin Your Memorial
+          </h2>
         </ScrollReveal>
+
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-16">
+          {[
+            { step: '1', title: 'Contact Us', desc: 'Fill in the form below or send us an email. Tell us about your companion and which piece speaks to you.' },
+            { step: '2', title: 'We Discuss', desc: 'We will reply within 24 hours to confirm details — personalization, timeline, and any questions you have.' },
+            { step: '3', title: 'Secure Payment', desc: 'Once everything is confirmed, we will send you a PayPal invoice or provide bank transfer details. Simple and safe.' },
+            { step: '4', title: 'We Craft & Ship', desc: 'Your piece is handcrafted with care. We send progress updates and ship with protective packaging worldwide.' },
+          ].map((item, i) => (
+            <div key={item.step} className="p-6 rounded-2xl bg-ivory-50 border border-ivory-200">
+              <span className="font-serif text-3xl text-walnut-200 mb-4 block">{item.step}</span>
+              <h3 className="font-sans font-medium text-charcoal-600 mb-2">{item.title}</h3>
+              <p className="font-sans text-sm text-charcoal-400 leading-relaxed">{item.desc}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center">
+          <p className="font-sans text-sm text-charcoal-400 mb-8 max-w-md mx-auto">
+            Each {product.name.toLowerCase()} is made to order — never kept in stock. When you are ready, we will begin.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <motion.a
+              href="/contact/"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center px-10 py-4 rounded-full bg-walnut-500 text-ivory-50 font-sans text-sm font-medium tracking-wide shadow-soft hover:shadow-medium transition-shadow duration-300"
+            >
+              Inquire About This Piece
+            </motion.a>
+            <motion.a
+              href="/collection/"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="inline-flex items-center justify-center px-10 py-4 rounded-full border border-walnut-500/30 text-walnut-600 font-sans text-sm font-medium tracking-wide hover:bg-walnut-50 transition-colors duration-300"
+            >
+              View Collection
+            </motion.a>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -748,7 +768,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       <PhotoUpload product={product} />
       <Specifications product={product} />
       <ProductFAQ />
-      <InquiryCTA />
+      <InquiryCTA product={product} />
       <RelatedProducts current={product} />
 
       {/* Back to top */}

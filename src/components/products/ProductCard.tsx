@@ -54,7 +54,7 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
             {product.tagline}
           </p>
           <p className="font-sans font-medium text-charcoal-600 pt-1">
-            ¥{product.price.toLocaleString()}
+            ${product.price.toLocaleString()}
           </p>
         </div>
       </Link>
