@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Product } from '@/lib/types';
@@ -294,36 +294,47 @@ function Personalization({ product }: { product: Product }) {
 /* ── Photo Upload ── */
 function PhotoUpload({ product }: { product: Product }) {
   const [dragActive, setDragActive] = useState(false);
-  const [files, setFiles] = useState<FileList | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleFiles = (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    const arr = Array.from(fileList);
+    if (arr.length > 5) {
+      setErrorMsg('Up to 5 photos at a time.');
+      return;
+    }
+    setErrorMsg('');
+    setFiles(arr);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!files || files.length === 0 || !email) return;
+    if (files.length === 0 || !email) return;
     setSending(true);
+    setErrorMsg('');
 
     try {
-      const formData = new FormData();
-      formData.append('email', email);
-      formData.append('_subject', `[MementoPaws] Photo upload for ${product.name}`);
-      formData.append('message', `Customer ${email} uploaded ${files.length} photo(s) for: ${product.name}`);
-      formData.append('_captcha', 'false');
-      formData.append('_template', 'table');
-      Array.from(files).forEach((file) => {
-        formData.append('attachment', file);
-      });
+      const fd = new FormData();
+      fd.append('email', email);
+      fd.append('_subject', `[MementoPaws] Photo upload for ${product.name}`);
+      fd.append('message', `Customer: ${email}\nProduct: ${product.name}\nPhotos: ${files.length} file(s)`);
+      fd.append('_captcha', 'false');
+      fd.append('_template', 'table');
+      files.forEach((f) => fd.append('attachment', f));
 
-      await fetch('https://formsubmit.co/ajax/1010130062@qq.com', {
+      const res = await fetch('https://formsubmit.co/ajax/1010130062@qq.com', {
         method: 'POST',
-        body: formData,
+        body: fd,
       });
 
+      if (!res.ok) throw new Error('Upload failed');
       setSent(true);
     } catch {
-      setSent(true);
+      setErrorMsg('Upload failed. Please try again or email photos directly.');
     } finally {
       setSending(false);
     }
@@ -345,12 +356,14 @@ function PhotoUpload({ product }: { product: Product }) {
           </motion.div>
           <h2 className="font-serif text-2xl text-walnut-600 mb-4">Photographs Received</h2>
           <p className="font-sans text-sm text-charcoal-400 max-w-md mx-auto">
-            We will study every photograph with care. You will receive progress updates at {email}.
+            We will study every photograph with care. Progress updates will be sent to {email}.
           </p>
         </div>
       </section>
     );
   }
+
+  const canSubmit = files.length > 0 && email.trim() !== '' && !sending;
 
   return (
     <section className="py-24 md:py-36 bg-ivory-100 relative overflow-hidden">
@@ -367,7 +380,7 @@ function PhotoUpload({ product }: { product: Product }) {
                 Upload a Photograph
               </h2>
               <p className="font-sans text-base text-charcoal-400 leading-relaxed mb-8">
-                Send us photographs of your companion. Our artisan will study these images — the tilt of their ears, the pattern of their coat, the light in their eyes.
+                Send us photographs of your companion. We will study each image — the tilt of their ears, the pattern of their coat, the light in their eyes.
               </p>
             </ScrollReveal>
 
@@ -387,16 +400,17 @@ function PhotoUpload({ product }: { product: Product }) {
 
             <ScrollReveal delay={0.15}>
               <input
-                ref={fileInputRef}
                 type="file"
                 name="attachment"
                 multiple
                 accept="image/jpeg,image/png"
                 className="hidden"
-                onChange={(e) => setFiles(e.target.files)}
+                id="photo-file-input"
+                onChange={(e) => handleFiles(e.target.files)}
               />
-              <div
-                className={`relative rounded-3xl border-2 border-dashed p-10 md:p-14 transition-all duration-500 cursor-pointer ${
+              <label
+                htmlFor="photo-file-input"
+                className={`block relative rounded-3xl border-2 border-dashed p-10 md:p-14 transition-all duration-500 cursor-pointer ${
                   dragActive
                     ? 'border-walnut-400 bg-walnut-50/50'
                     : 'border-ivory-300 hover:border-walnut-300/50 bg-ivory-50'
@@ -404,8 +418,7 @@ function PhotoUpload({ product }: { product: Product }) {
                 onDragEnter={() => setDragActive(true)}
                 onDragLeave={() => setDragActive(false)}
                 onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                onDrop={(e) => { e.preventDefault(); setDragActive(false); const dt = e.dataTransfer; if (dt.files) { setFiles(dt.files); } }}
-                onClick={() => fileInputRef.current?.click()}
+                onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFiles(e.dataTransfer.files); }}
               >
                 <motion.div animate={{ y: dragActive ? -4 : 0 }}>
                   <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-ivory-200 flex items-center justify-center">
@@ -413,34 +426,47 @@ function PhotoUpload({ product }: { product: Product }) {
                       <path d="M21 15V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V15M17 8L12 3M12 3L7 8M12 3V15" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </div>
-                  {files && files.length > 0 ? (
-                    <p className="font-sans text-sm text-walnut-600 mb-1">
-                      {files.length} file{files.length > 1 ? 's' : ''} selected
-                    </p>
+                  {files.length > 0 ? (
+                    <div>
+                      <p className="font-sans text-sm text-walnut-600 mb-1">
+                        {files.length} photo{files.length > 1 ? 's' : ''} selected
+                      </p>
+                      <p className="font-sans text-xs text-walnut-400 max-w-sm mx-auto truncate">
+                        {files.map((f) => f.name).join(', ')}
+                      </p>
+                    </div>
                   ) : (
-                    <p className="font-sans text-sm text-charcoal-500 mb-1">
-                      Drag photos here, or click to browse
-                    </p>
+                    <>
+                      <p className="font-sans text-sm text-charcoal-500 mb-1">
+                        Drag photos here, or click to browse
+                      </p>
+                      <p className="font-sans text-xs text-charcoal-300">
+                        JPG or PNG. Up to 5 photos at a time.
+                      </p>
+                    </>
                   )}
-                  <p className="font-sans text-xs text-charcoal-300">
-                    JPG or PNG. 5-10 photos from different angles recommended.
-                  </p>
                 </motion.div>
-              </div>
+              </label>
             </ScrollReveal>
+
+            {errorMsg && (
+              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4 font-sans text-sm text-red-400">
+                {errorMsg}
+              </motion.p>
+            )}
 
             <ScrollReveal delay={0.25}>
               <motion.button
                 type="submit"
-                disabled={sending || !files || files.length === 0 || !email}
-                whileHover={!sending ? { scale: 1.02 } : {}}
-                whileTap={!sending ? { scale: 0.98 } : {}}
+                disabled={!canSubmit}
+                whileHover={canSubmit ? { scale: 1.02 } : {}}
+                whileTap={canSubmit ? { scale: 0.98 } : {}}
                 className={`mt-8 px-10 py-4 rounded-full font-sans text-sm font-medium tracking-wide transition-all duration-300 ${
                   sending
-                    ? 'bg-walnut-300 text-ivory-50 cursor-not-allowed'
-                    : !files || files.length === 0 || !email
-                    ? 'bg-ivory-300 text-ivory-50 cursor-not-allowed'
-                    : 'bg-walnut-500 text-ivory-50 shadow-soft hover:shadow-medium'
+                    ? 'bg-walnut-300 text-ivory-50 cursor-wait'
+                    : canSubmit
+                    ? 'bg-walnut-500 text-ivory-50 shadow-soft hover:shadow-medium'
+                    : 'bg-ivory-300 text-ivory-50 cursor-not-allowed'
                 }`}
               >
                 {sending ? 'Sending...' : 'Send Photographs'}
