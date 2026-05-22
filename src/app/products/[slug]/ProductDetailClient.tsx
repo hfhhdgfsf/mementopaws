@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
 import { Product } from '@/lib/types';
@@ -294,21 +294,42 @@ function Personalization({ product }: { product: Product }) {
 /* ── Photo Upload ── */
 function PhotoUpload({ product }: { product: Product }) {
   const [dragActive, setDragActive] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<{ file: File; preview: string }[]>([]);
   const [email, setEmail] = useState('');
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Clean up preview URLs on unmount
+  useEffect(() => {
+    return () => files.forEach((f) => URL.revokeObjectURL(f.preview));
+  }, [files]);
+
   const handleFiles = (fileList: FileList | null) => {
     if (!fileList || fileList.length === 0) return;
-    const arr = Array.from(fileList);
-    if (arr.length > 5) {
-      setErrorMsg('Up to 5 photos at a time.');
-      return;
-    }
-    setErrorMsg('');
-    setFiles(arr);
+    const newFiles = Array.from(fileList).map((file) => ({
+      file,
+      preview: URL.createObjectURL(file),
+    }));
+
+    setFiles((prev) => {
+      const combined = [...prev, ...newFiles];
+      if (combined.length > 5) {
+        setErrorMsg(`Max 5 photos. You have ${prev.length} already, can add ${5 - prev.length} more.`);
+        return prev;
+      }
+      setErrorMsg('');
+      return combined;
+    });
+  };
+
+  const removeFile = (index: number) => {
+    setFiles((prev) => {
+      URL.revokeObjectURL(prev[index].preview);
+      const next = prev.filter((_, i) => i !== index);
+      setErrorMsg('');
+      return next;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -317,14 +338,23 @@ function PhotoUpload({ product }: { product: Product }) {
     setSending(true);
     setErrorMsg('');
 
-    // Use standard form submission to FormSubmit (handles file attachments properly)
     const form = e.target as HTMLFormElement;
-    const dataTransfer = new DataTransfer();
-    files.forEach((f) => dataTransfer.items.add(f));
-    const fileInput = form.querySelector('input[type=file]') as HTMLInputElement;
-    if (fileInput) fileInput.files = dataTransfer.files;
 
-    // Show success after a short delay (form submits in background via target=_blank)
+    // Remove old hidden file inputs
+    form.querySelectorAll('input[name^=photo-]').forEach((el) => el.remove());
+
+    // Create one hidden file input per photo (different name for each)
+    files.forEach((f, i) => {
+      const dt = new DataTransfer();
+      dt.items.add(f.file);
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.name = `photo-${i}`;
+      input.style.display = 'none';
+      input.files = dt.files;
+      form.appendChild(input);
+    });
+
     setTimeout(() => {
       setSending(false);
       setSent(true);
@@ -376,10 +406,10 @@ function PhotoUpload({ product }: { product: Product }) {
                 Share Their Memory
               </span>
               <h2 className="font-serif text-display-sm md:text-3xl text-walnut-600 mb-6">
-                Upload a Photograph
+                Upload Photographs
               </h2>
               <p className="font-sans text-base text-charcoal-400 leading-relaxed mb-8">
-                Send us photographs of your companion. We will study each image — the tilt of their ears, the pattern of their coat, the light in their eyes.
+                Send us photos of your companion. Drag them here or click to browse — you will see a preview of each one. You can add up to 5 photos.
               </p>
             </ScrollReveal>
 
@@ -398,6 +428,9 @@ function PhotoUpload({ product }: { product: Product }) {
             </ScrollReveal>
 
             <ScrollReveal delay={0.15}>
+              <input type="hidden" name="_subject" value={`[MementoPaws] Photo upload for ${product.name}`} />
+              <input type="hidden" name="_captcha" value="false" />
+              <input type="hidden" name="_template" value="table" />
               <input
                 type="file"
                 name="attachment"
@@ -407,12 +440,9 @@ function PhotoUpload({ product }: { product: Product }) {
                 id="photo-file-input"
                 onChange={(e) => handleFiles(e.target.files)}
               />
-              <input type="hidden" name="_subject" value={`[MementoPaws] Photo upload for ${product.name}`} />
-              <input type="hidden" name="_captcha" value="false" />
-              <input type="hidden" name="_template" value="table" />
               <label
                 htmlFor="photo-file-input"
-                className={`block relative rounded-3xl border-2 border-dashed p-10 md:p-14 transition-all duration-500 cursor-pointer ${
+                className={`block relative rounded-3xl border-2 border-dashed p-8 md:p-12 transition-all duration-500 cursor-pointer ${
                   dragActive
                     ? 'border-walnut-400 bg-walnut-50/50'
                     : 'border-ivory-300 hover:border-walnut-300/50 bg-ivory-50'
@@ -423,27 +453,53 @@ function PhotoUpload({ product }: { product: Product }) {
                 onDrop={(e) => { e.preventDefault(); setDragActive(false); handleFiles(e.dataTransfer.files); }}
               >
                 <motion.div animate={{ y: dragActive ? -4 : 0 }}>
-                  <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-ivory-200 flex items-center justify-center">
-                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-walnut-400">
-                      <path d="M21 15V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V15M17 8L12 3M12 3L7 8M12 3V15" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
                   {files.length > 0 ? (
                     <div>
-                      <p className="font-sans text-sm text-walnut-600 mb-1">
+                      {/* Thumbnail grid */}
+                      <div className="flex flex-wrap justify-center gap-3 mb-4">
+                        {files.map((f, i) => (
+                          <div key={i} className="relative group">
+                            <img
+                              src={f.preview}
+                              alt={`Preview ${i + 1}`}
+                              className="w-20 h-20 rounded-xl object-cover border border-ivory-300"
+                            />
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); removeFile(i); }}
+                              className="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-charcoal-300 text-ivory-50 text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-charcoal-500"
+                              aria-label={`Remove photo ${i + 1}`}
+                            >
+                              &times;
+                            </button>
+                          </div>
+                        ))}
+                        {files.length < 5 && (
+                          <div className="w-20 h-20 rounded-xl border-2 border-dashed border-ivory-300 flex items-center justify-center text-ivory-300">
+                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                              <line x1="10" y1="4" x2="10" y2="16"/>
+                              <line x1="4" y1="10" x2="16" y2="10"/>
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+                      <p className="font-sans text-sm text-walnut-600">
                         {files.length} photo{files.length > 1 ? 's' : ''} selected
-                      </p>
-                      <p className="font-sans text-xs text-walnut-400 max-w-sm mx-auto truncate">
-                        {files.map((f) => f.name).join(', ')}
+                        {files.length < 5 ? ' — drag or click to add more' : ' (max reached)'}
                       </p>
                     </div>
                   ) : (
                     <>
+                      <div className="w-14 h-14 mx-auto mb-4 rounded-full bg-ivory-200 flex items-center justify-center">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-walnut-400">
+                          <path d="M21 15V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V15M17 8L12 3M12 3L7 8M12 3V15" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </div>
                       <p className="font-sans text-sm text-charcoal-500 mb-1">
                         Drag photos here, or click to browse
                       </p>
                       <p className="font-sans text-xs text-charcoal-300">
-                        JPG or PNG. Up to 5 photos at a time.
+                        JPG or PNG. Up to 5 photos.
                       </p>
                     </>
                   )}
