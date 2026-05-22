@@ -311,33 +311,26 @@ function PhotoUpload({ product }: { product: Product }) {
     setFiles(arr);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (files.length === 0 || !email) return;
     setSending(true);
     setErrorMsg('');
 
-    try {
-      const fd = new FormData();
-      fd.append('email', email);
-      fd.append('_subject', `[MementoPaws] Photo upload for ${product.name}`);
-      fd.append('message', `Customer: ${email}\nProduct: ${product.name}\nPhotos: ${files.length} file(s)`);
-      fd.append('_captcha', 'false');
-      fd.append('_template', 'table');
-      files.forEach((f) => fd.append('attachment', f));
+    // Use standard form submission to FormSubmit (handles file attachments properly)
+    const form = e.target as HTMLFormElement;
+    const dataTransfer = new DataTransfer();
+    files.forEach((f) => dataTransfer.items.add(f));
+    const fileInput = form.querySelector('input[type=file]') as HTMLInputElement;
+    if (fileInput) fileInput.files = dataTransfer.files;
 
-      const res = await fetch('https://formsubmit.co/ajax/1010130062@qq.com', {
-        method: 'POST',
-        body: fd,
-      });
-
-      if (!res.ok) throw new Error('Upload failed');
-      setSent(true);
-    } catch {
-      setErrorMsg('Upload failed. Please try again or email photos directly.');
-    } finally {
+    // Show success after a short delay (form submits in background via target=_blank)
+    setTimeout(() => {
       setSending(false);
-    }
+      setSent(true);
+    }, 2000);
+
+    form.submit();
   };
 
   if (sent) {
@@ -370,7 +363,13 @@ function PhotoUpload({ product }: { product: Product }) {
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-candlelight-300/10 pointer-events-none" />
 
       <div className="container-narrow relative">
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          action="https://formsubmit.co/1010130062@qq.com"
+          method="POST"
+          encType="multipart/form-data"
+          target="_blank"
+        >
           <div className="max-w-2xl mx-auto text-center">
             <ScrollReveal>
               <span className="block font-sans text-xs font-medium tracking-[0.25em] uppercase text-walnut-400 mb-6">
@@ -408,6 +407,9 @@ function PhotoUpload({ product }: { product: Product }) {
                 id="photo-file-input"
                 onChange={(e) => handleFiles(e.target.files)}
               />
+              <input type="hidden" name="_subject" value={`[MementoPaws] Photo upload for ${product.name}`} />
+              <input type="hidden" name="_captcha" value="false" />
+              <input type="hidden" name="_template" value="table" />
               <label
                 htmlFor="photo-file-input"
                 className={`block relative rounded-3xl border-2 border-dashed p-10 md:p-14 transition-all duration-500 cursor-pointer ${
