@@ -23,8 +23,13 @@ export default function ProductCard({ product, index = 0 }: ProductCardProps) {
       >
         {/* Image container */}
         <div className="relative overflow-hidden rounded-3xl aspect-[4/5] bg-ivory-200 mb-6">
-          {/* Gradient placeholder */}
-          <div className="absolute inset-0 bg-gradient-to-br from-ivory-300 via-beige-200 to-walnut-200 opacity-50 group-hover:opacity-40 transition-opacity duration-700" />
+          {/* Product image */}
+          <img
+            src={product.images[0]}
+            alt={product.name}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+            loading="lazy"
+          />
 
           {/* Hover shimmer */}
           <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-b from-transparent via-transparent to-walnut-500/5" />

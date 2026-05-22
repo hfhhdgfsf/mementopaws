@@ -15,9 +15,15 @@ interface ProductDetailClientProps {
 function HeroGallery({ product }: { product: Product }) {
   return (
     <section className="relative h-[60vh] md:h-[75vh] min-h-[500px] bg-ivory-200 overflow-hidden">
-      {/* Image placeholder with warm gradient */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-ivory-300 via-beige-200 to-walnut-200 opacity-40" />
+        {/* Product image */}
+        <img
+          src={product.images[0]}
+          alt={product.name}
+          className="absolute inset-0 w-full h-full object-cover opacity-90"
+        />
+        {/* Warm overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-ivory-300/30 via-beige-200/20 to-walnut-200/30" />
         {/* Soft radial light */}
         <div
           className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] rounded-full"
