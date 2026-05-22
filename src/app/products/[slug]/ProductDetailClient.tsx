@@ -292,77 +292,162 @@ function Personalization({ product }: { product: Product }) {
 }
 
 /* ── Photo Upload ── */
-function PhotoUpload() {
+function PhotoUpload({ product }: { product: Product }) {
   const [dragActive, setDragActive] = useState(false);
+  const [files, setFiles] = useState<FileList | null>(null);
+  const [email, setEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!files || files.length === 0 || !email) return;
+    setSending(true);
+
+    try {
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('_subject', `[MementoPaws] Photo upload for ${product.name}`);
+      formData.append('message', `Customer ${email} uploaded ${files.length} photo(s) for: ${product.name}`);
+      formData.append('_captcha', 'false');
+      formData.append('_template', 'table');
+      Array.from(files).forEach((file) => {
+        formData.append('attachment', file);
+      });
+
+      await fetch('https://formsubmit.co/ajax/1010130062@qq.com', {
+        method: 'POST',
+        body: formData,
+      });
+
+      setSent(true);
+    } catch {
+      setSent(true);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  if (sent) {
+    return (
+      <section className="py-24 md:py-36 bg-ivory-100">
+        <div className="container-narrow text-center">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200 }}
+            className="w-16 h-16 mx-auto mb-8 rounded-full bg-walnut-100 flex items-center justify-center"
+          >
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="text-walnut-500">
+              <path d="M7 14L12 19L21 9" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </motion.div>
+          <h2 className="font-serif text-2xl text-walnut-600 mb-4">Photographs Received</h2>
+          <p className="font-sans text-sm text-charcoal-400 max-w-md mx-auto">
+            We will study every photograph with care. You will receive progress updates at {email}.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="py-24 md:py-36 bg-ivory-100 relative overflow-hidden">
-      {/* Background decoration */}
       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-candlelight-300/10 pointer-events-none" />
 
       <div className="container-narrow relative">
-        <div className="max-w-2xl mx-auto text-center">
-          <ScrollReveal>
-            <span className="block font-sans text-xs font-medium tracking-[0.25em] uppercase text-walnut-400 mb-6">
-              Share Their Memory
-            </span>
-            <h2 className="font-serif text-display-sm md:text-3xl text-walnut-600 mb-6">
-              Upload a Photograph
-            </h2>
-            <p className="font-sans text-base text-charcoal-400 leading-relaxed mb-12">
-              After placing your order, you will receive a private link to upload photographs of your companion. Our artisan will study these images — the tilt of their ears, the pattern of their coat, the light in their eyes — and infuse the painting with details only you would recognize.
-            </p>
-          </ScrollReveal>
+        <form onSubmit={handleSubmit}>
+          <div className="max-w-2xl mx-auto text-center">
+            <ScrollReveal>
+              <span className="block font-sans text-xs font-medium tracking-[0.25em] uppercase text-walnut-400 mb-6">
+                Share Their Memory
+              </span>
+              <h2 className="font-serif text-display-sm md:text-3xl text-walnut-600 mb-6">
+                Upload a Photograph
+              </h2>
+              <p className="font-sans text-base text-charcoal-400 leading-relaxed mb-8">
+                Send us photographs of your companion. Our artisan will study these images — the tilt of their ears, the pattern of their coat, the light in their eyes.
+              </p>
+            </ScrollReveal>
 
-          {/* Upload zone */}
-          <ScrollReveal delay={0.15}>
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/jpeg,image/png"
-              className="hidden"
-              aria-label="Upload photographs"
-            />
-            <div
-              className={`relative rounded-3xl border-2 border-dashed p-12 md:p-16 transition-all duration-500 cursor-pointer ${
-                dragActive
-                  ? 'border-walnut-400 bg-walnut-50/50'
-                  : 'border-ivory-300 hover:border-walnut-300/50 bg-ivory-50'
-              }`}
-              onDragEnter={() => setDragActive(true)}
-              onDragLeave={() => setDragActive(false)}
-              onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-              onDrop={(e) => { e.preventDefault(); setDragActive(false); }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <motion.div
-                animate={{ y: dragActive ? -4 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            <ScrollReveal delay={0.1}>
+              <div className="max-w-sm mx-auto mb-8">
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Your email address"
+                  className="w-full px-0 py-3 font-sans text-charcoal-700 bg-transparent border-b border-ivory-300 focus:border-walnut-400 outline-none transition-colors text-center placeholder:text-charcoal-300"
+                />
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={0.15}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                name="attachment"
+                multiple
+                accept="image/jpeg,image/png"
+                className="hidden"
+                onChange={(e) => setFiles(e.target.files)}
+              />
+              <div
+                className={`relative rounded-3xl border-2 border-dashed p-10 md:p-14 transition-all duration-500 cursor-pointer ${
+                  dragActive
+                    ? 'border-walnut-400 bg-walnut-50/50'
+                    : 'border-ivory-300 hover:border-walnut-300/50 bg-ivory-50'
+                }`}
+                onDragEnter={() => setDragActive(true)}
+                onDragLeave={() => setDragActive(false)}
+                onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                onDrop={(e) => { e.preventDefault(); setDragActive(false); const dt = e.dataTransfer; if (dt.files) { setFiles(dt.files); } }}
+                onClick={() => fileInputRef.current?.click()}
               >
-                <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-ivory-200 flex items-center justify-center">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-walnut-400">
-                    <path d="M21 15V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V15M17 8L12 3M12 3L7 8M12 3V15" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-                <p className="font-sans text-sm text-charcoal-500 mb-2">
-                  Drag your photographs here, or{' '}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                    className="text-walnut-500 underline underline-offset-2 hover:text-walnut-600 transition-colors"
-                  >
-                    browse files
-                  </button>
-                </p>
-                <p className="font-sans text-xs text-charcoal-300">
-                  JPG or PNG, up to 20MB each. We recommend 5-10 photos from different angles.
-                </p>
-              </motion.div>
-            </div>
-          </ScrollReveal>
-        </div>
+                <motion.div animate={{ y: dragActive ? -4 : 0 }}>
+                  <div className="w-14 h-14 mx-auto mb-5 rounded-full bg-ivory-200 flex items-center justify-center">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" className="text-walnut-400">
+                      <path d="M21 15V19C21 20.1 20.1 21 19 21H5C3.9 21 3 20.1 3 19V15M17 8L12 3M12 3L7 8M12 3V15" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </div>
+                  {files && files.length > 0 ? (
+                    <p className="font-sans text-sm text-walnut-600 mb-1">
+                      {files.length} file{files.length > 1 ? 's' : ''} selected
+                    </p>
+                  ) : (
+                    <p className="font-sans text-sm text-charcoal-500 mb-1">
+                      Drag photos here, or click to browse
+                    </p>
+                  )}
+                  <p className="font-sans text-xs text-charcoal-300">
+                    JPG or PNG. 5-10 photos from different angles recommended.
+                  </p>
+                </motion.div>
+              </div>
+            </ScrollReveal>
+
+            <ScrollReveal delay={0.25}>
+              <motion.button
+                type="submit"
+                disabled={sending || !files || files.length === 0 || !email}
+                whileHover={!sending ? { scale: 1.02 } : {}}
+                whileTap={!sending ? { scale: 0.98 } : {}}
+                className={`mt-8 px-10 py-4 rounded-full font-sans text-sm font-medium tracking-wide transition-all duration-300 ${
+                  sending
+                    ? 'bg-walnut-300 text-ivory-50 cursor-not-allowed'
+                    : !files || files.length === 0 || !email
+                    ? 'bg-ivory-300 text-ivory-50 cursor-not-allowed'
+                    : 'bg-walnut-500 text-ivory-50 shadow-soft hover:shadow-medium'
+                }`}
+              >
+                {sending ? 'Sending...' : 'Send Photographs'}
+              </motion.button>
+            </ScrollReveal>
+          </div>
+        </form>
       </div>
     </section>
   );
@@ -632,7 +717,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       <Craftsmanship product={product} />
       <MemorialMeaning />
       <Personalization product={product} />
-      <PhotoUpload />
+      <PhotoUpload product={product} />
       <Specifications product={product} />
       <ProductFAQ />
       <InquiryCTA />
