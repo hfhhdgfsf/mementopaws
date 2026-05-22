@@ -21,7 +21,7 @@ export const products: Product[] = [
       'Personalized name engraving available',
       'Gift packaging included',
     ],
-    images: ['/images/urn-01.jpg'],
+    images: ['/images/urn-01.webp'],
     featured: true,
     isNew: false,
   },
